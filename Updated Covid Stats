@@ -1,0 +1,185 @@
+library(yarrr) #the library command opens whatever installed package you wish to open and 
+#imports commands within that package
+library(car) #opens car package for this R file
+library(manipulateWidget)
+library(shiny)
+library(readxl) #importing this package allows us to read in excel files (import data from excel)
+library(tidyr)
+library(ipred)
+library(rpart)
+
+setwd("/Users/User/Desktop/Covid Databases") #this lets us grab excel files from Covid Databases folder located on the desktop
+getwd()
+
+CovidStats_data = read_excel("Updated Covid Stats.xlsx")
+CovidStats.df = CovidStats_data #converts this into a dataframe (.df)
+head(CovidStats.df)
+summary(CovidStats.df)
+
+attach(CovidStats.df)
+
+CovidVote.logistic = glm(PRESVOTE ~ DEATHRATE, family = binomial)
+par(mfrow = c(2,2)) #2 rows, 2 columns
+plot(CovidVote.logistic)
+summary(CovidVote.logistic) #quite a bad model by the look of it with deathrate having no association with presidential vote
+#in the 2020 election. To clarify, a value of 1 for the 2020 election indicates a state vote for Biden, and 0 for Trump
+
+newdata <- data.frame(DEATHRATE=seq(min(CovidStats.df$DEATHRATE), max(CovidStats.df$DEATHRATE),len=500))
+newdata$PRESVOTE = predict(CovidVote.logistic, newdata, type="response")
+par(mfrow = c(1,1))
+plot(PRESVOTE ~ DEATHRATE, data = CovidStats.df, col="red", main = "Death Rate Model. 48% acc.", xlab = "Covid-19 Death Rate",
+     ylab = "2020 Vote by State (1 = Biden, 0 = Trump)")  
+#THIS IS FOR PLOTTING THE LOGISTIC MODEL
+lines(PRESVOTE ~ DEATHRATE, newdata, lwd=2)
+
+DeathVote.prob = predict(CovidVote.logistic, type="response")
+DeathVote.pred = rep("0", dim(CovidStats.df)[1])
+DeathVote.pred[DeathVote.prob > .5] = "Biden"        #THIS IS FOR MAKING A TABLE TO ASSESS ITS ACCURACY
+DeathVote.pred[DeathVote.prob < .5] = "Trump"       #we use the Bayes Classifier to make the division here (> 0.5) = win
+table(DeathVote.pred, CovidStats.df$PRESVOTE)
+
+min(DeathVote.prob) #states with a higher death rate (1.8% or above) are modestly more likely to vote for Trump
+max(DeathVote.prob) #states with a low death rate (0.6% or lower) are very slightly more likely to vote for Biden
+
+InfectionVote.logistic = glm(PRESVOTE ~ INFECTIONRATE, family = binomial)
+par(mfrow = c(2,2))
+summary(InfectionVote.logistic) #very strong association here. Lets plot it and see what it looks like
+
+newdata2 <- data.frame(INFECTIONRATE=seq(min(CovidStats.df$INFECTIONRATE), max(CovidStats.df$INFECTIONRATE),len=500))
+newdata2$PRESVOTE = predict(InfectionVote.logistic, newdata2, type="response")
+par(mfrow = c(1,1))
+plot(PRESVOTE ~ INFECTIONRATE, data = CovidStats.df, col = "blue", main = "Infection Rate Model. 82% acc.", 
+      xlab = "Covid-19 Infection Rate", ylab = "2020 Vote by State (1 = Biden, 0 = Trump)")
+lines(PRESVOTE ~ INFECTIONRATE, newdata2, lwd=2)
+
+InfectVote.prob = predict(InfectionVote.logistic, type = "response")
+InfectVote.pred = rep("0", dim(CovidStats.df)[1])
+InfectVote.pred[InfectVote.prob > .5] = "Biden"
+InfectVote.pred[InfectVote.prob < .5] = "Trump"
+table(InfectVote.pred, CovidStats.df$PRESVOTE)
+
+min(InfectVote.prob)
+min(INFECTIONRATE) #the state with the lowest infection rate, at 7.07%, was 99.9% likely to vote for Biden
+max(InfectVote.prob) 
+max(INFECTIONRATE) #the state with the highest infection rate, at 22.16%, was 99% likely to vote for Trump
+
+
+VaxxVote.logistic = glm(PRESVOTE ~ FULLVAXX, family = binomial)
+par(mfrow = c(2,2))
+summary(VaxxVote.logistic) #extremely strong association here (null hypothesis almost certainly
+#rejected. Lets plot it and see what it looks like
+
+newdata3 <- data.frame(FULLVAXX=seq(min(CovidStats.df$FULLVAXX), max(CovidStats.df$FULLVAXX),len=500))
+newdata3$PRESVOTE = predict(VaxxVote.logistic, newdata3, type="response")
+par(mfrow = c(1,1))
+plot(PRESVOTE ~ FULLVAXX, data = CovidStats.df, col = "green", main = "Full Vaccination Rate Model. 94% acc.", 
+     xlab = "Covid-19 Full Vaccination Rate", ylab = "2020 Vote by State (1 = Biden, 0 = Trump)")
+lines(PRESVOTE ~ FULLVAXX, newdata3, lwd=2)
+
+VaxxVote.prob = predict(VaxxVote.logistic, type = "response")
+VaxxVote.pred = rep("0", dim(CovidStats.df)[1])
+VaxxVote.pred[VaxxVote.prob > .5] = "Biden"
+VaxxVote.pred[VaxxVote.prob < .5] = "Trump"
+table(VaxxVote.pred, CovidStats.df$PRESVOTE)
+
+
+DeathVote.logistic = glm(PRESVOTE ~ RECENTDEATHRATE, family = binomial)
+par(mfrow = c(2,2))
+summary(DeathVote.logistic) #moderately strong association here (null hypothesis very likely
+#rejected. Lets plot it and see what it looks like
+
+newdata4 <- data.frame(RECENTDEATHRATE=seq(min(CovidStats.df$RECENTDEATHRATE), max(CovidStats.df$RECENTDEATHRATE),len=500))
+newdata4$PRESVOTE = predict(DeathVote.logistic, newdata4, type="response")
+par(mfrow = c(1,1))
+plot(PRESVOTE ~ RECENTDEATHRATE, data = CovidStats.df, col = "black", main = "Recent Death Rate (August - December
+     2021) Model. 68% acc.", xlab = "Covid-19 Death Rate", ylab = "2020 Vote by State (1 = Biden, 0 = Trump)")
+lines(PRESVOTE ~ RECENTDEATHRATE, newdata4, lwd=2)
+
+NewDeathVote.prob = predict(DeathVote.logistic, type = "response")
+NewDeathVote.pred = rep("0", dim(CovidStats.df)[1])
+NewDeathVote.pred[NewDeathVote.prob > .5] = "Biden"
+NewDeathVote.pred[NewDeathVote.prob < .5] = "Trump"
+table(NewDeathVote.pred, CovidStats.df$PRESVOTE)
+
+CovidTemp.lm = lm(AVGTEMP ~ TOTCASES)
+plot(AVGTEMP ~ TOTCASES, ylab = "Average Temperature (F)", xlab = "Total Covid-19 Cases per State")
+abline(CovidTemp.lm)
+
+summary(CovidTemp.lm)
+
+#minimal association between total covid cases and temperature
+
+InfectionTemp.lm = lm(AVGTEMP ~ INFECTIONRATE)
+plot(AVGTEMP ~ INFECTIONRATE, ylab = "Average Temperature (F)", xlab = "Covid-19 infection rate per State")
+abline(InfectionTemp.lm)
+summary(InfectionTemp.lm) #no association between temperature and Covid-19 infection rate
+
+VaxxCases.lm = lm(FULLVAXX ~ TOTCASES)
+plot(FULLVAXX ~ TOTCASES, ylab = "Full Vaccination Rate", xlab = "Total Covid-19 Cases per State")
+abline(VaxxCases.lm)
+
+summary(VaxxCases.lm) #essentially no association between full vaccination rate and total covid cases
+
+summary(CovidStats.df)
+
+VaxxInfection.lm = lm(FULLVAXX ~ INFECTIONRATE)
+plot(FULLVAXX ~ INFECTIONRATE, ylab = "Full Vaccination Rate", xlab = "Covid-19 Infection Rate per State")
+abline(VaxxInfection.lm)
+summary(VaxxInfection.lm) #weak negative association between full vaccination rate and infection rate
+
+VaxxDeathrate.lm = lm(FULLVAXX ~ DEATHRATE)
+plot(FULLVAXX ~ DEATHRATE, ylab = "Full Vaccination Rate", xlab = "Covid-19 Death Rate by State")
+abline(VaxxDeathrate.lm)
+summary(VaxxDeathrate.lm) #no association between vaccination rate and Covid-19 death rate
+
+NewVaxxDeathrate.lm = lm(FULLVAXX ~ RECENTDEATHRATE)
+plot(FULLVAXX ~ RECENTDEATHRATE, ylab = "Full Vaccination Rate", xlab = "Covid-19 Death Rate by State (8/24 - 12/30)")
+abline(NewVaxxDeathrate.lm)
+summary(NewVaxxDeathrate.lm)
+
+#weak to moderate association between higher vaccination rates and lower Covid-19 deathrates. Much stronger association than
+#between vaccinations and overall Covid-19 death rate, though
+
+ObeseDeaths.lm = lm(PERCOBESE ~ DEATHRATE)
+plot(PERCOBESE ~ DEATHRATE, ylab = "Obesity Rate", xlab = "Covid-19 Death Rate by State")
+abline(ObeseDeaths.lm)
+summary(ObeseDeaths.lm) #minimal to no association between obesity and Covid-19 death rate
+
+SuppPovertyDeaths.lm = lm(SUPPPOV ~ DEATHRATE)
+plot(SUPPPOV ~ DEATHRATE, ylab = "Supplemental Poverty Rate", xlab = "Covid-19 Death Rate by State")
+abline(SuppPovertyDeaths.lm)
+
+summary(SuppPovertyDeaths.lm) #weak association between higher supplemental poverty rate and Covid-19 death rate
+
+AgeDeaths.lm = lm(AVGAGE ~ DEATHRATE)
+plot(AVGAGE ~ DEATHRATE, ylab = "Average Age (years)", xlab = "Covid-19 Death Rate by State")
+abline(AgeDeaths.lm)
+
+summary(AgeDeaths.lm) #no association between the average age in a state and Covid-19 death rate. This is NOT the same as age
+#and Covid-19 death rate.
+
+BlackDeaths.lm = lm(PERCBLACK ~ DEATHRATE)
+plot(PERCBLACK ~ DEATHRATE, ylab = "Percent Black Population", xlab = "Covid-19 Death Rate by State")
+abline(BlackDeaths.lm)
+
+summary(BlackDeaths.lm) #weak positive association between greater population of black residents and Covid-19 death rate
+#its possible this relationship could be captured better by a quadratic model
+
+HomelessDeaths.lm = lm(PERCHOMELESS ~ DEATHRATE)
+plot(PERCHOMELESS ~ DEATHRATE, ylab = "Percent Homeless", xlab = "Covid-19 Death Rate by State")
+abline(HomelessDeaths.lm)
+
+summary(HomelessDeaths.lm) #no association between homelessness and Covid-19 death rate
+
+FirstShotDeaths.lm = lm(SINGLESHOT ~ DEATHRATE)
+plot(SINGLESHOT ~ DEATHRATE, ylab = "Single Shot Vaccination Rate", xlab = "Covid-19 Death Rate by State")
+abline(FirstShotDeaths.lm)
+summary(FirstShotDeaths.lm) #no association between initial shot and Covid-19 death rate
+
+FirstShotRecentDeaths.lm = lm(SINGLESHOT ~ RECENTDEATHRATE)
+plot(SINGLESHOT ~ RECENTDEATHRATE, ylab = "Single Shot Vaccination Rate", xlab = "Covid-19 Death Rate by State (8/24-12/30)")
+abline(FirstShotRecentDeaths.lm)
+summary(FirstShotRecentDeaths.lm) #weak negative association between initial vaccine shot and recent Covid-19 death rate
+
+plot(CovidStats.df) #gives us all the graphs at once which allows us to determine all possibly meaningful relationships between
+#every variable pair
