@@ -1,0 +1,45 @@
+setwd("/Users/User/Desktop/Covid Databases")
+getwd()
+
+library("readxl")
+library("yarrr")
+
+CovidStats_data = read_excel("CovidStats.xlsx") #imports our desired excel file into R
+head(CovidStats_data)
+
+CovidStats.df = CovidStats_data #renames the data file into a dataframe (.df)
+summary(CovidStats.df)
+
+CovidStats.df[1:5, 1:4] #this command prints the first 5 rows and the first four columns. 1:5 indicates rows 1 through 5
+#and 1:4 indicates columns 1 through 4
+
+CovidStats.df[1:3, 2:7] #and this command prints the first 3 rows and columns 2 through 7 skipping the first column
+
+mean(CovidStats.df$FULLVAXX) #calculates the mean full vaccination rate, which is 50.494%
+sd(CovidStats.df$FULLVAXX) #calculates the standard deviation of the full vaccination rate, which is 8.375%
+var(CovidStats.df$FULLVAXX) #calculates the VARIANCE of the full vaccination rate, which is 0.7% (recall, variance is sd^2)
+length(CovidStats.df$FULLVAXX) #the length of the dataframe is 50 observations (n=50)
+sse(CovidStats.df$FULLVAXX)
+
+par(mfrow=c(1,1))
+plot(x = CovidStats.df$PERCBLACK, y = CovidStats.df$FULLVAXX, col = "Blue", pch = 16, 
+     main= "Percent Black Population vs Full Vaccination Rate") #creates a plot between two variables of this dataframe
+#and indicates appearance of observation (pch = 16) and colors each one blue
+reg_model <- lm(FULLVAXX~PERCBLACK, data = CovidStats.df)
+abline(reg_model, col="Gray") 
+
+VaxBlackPop.lm = lm(FULLVAXX ~ PERCBLACK, data=CovidStats.df) #creates a linear model between the two variables we just plotted
+par(mfrow=c(2,2)) #sets up 2 rows, 2 columns in the plotting window
+plot(VaxBlackPop.lm)
+summary(VaxBlackPop.lm) #7.6% of variation in full vaccination is explained by the black population so this is likely a very weak
+#relationship
+
+#linear model is given by y = 0.53152 - 0.25245x
+
+names(VaxBlackPop.lm) #tells us what the components of the simple linear regression are
+
+VaxBlackPop.lm$coefficients #tells us the coefficients of the simple linear regression (slope and intercept)
+VaxBlackPop.lm$df.residual
+VaxBlackPop.lm$residuals #and this prints the residuals (errors) between the expected and actual y values for each observation
+
+VaxBlackPop.lm$fitted.values #these are the expected values predicted by the linear model for all 50 observations
